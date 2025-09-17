@@ -19,15 +19,15 @@ def detect_yellow_ball():
             break
         
         # *2 Set the image resolution to 480x480. Note increasing resolution increases processing power used, and may slow down video feed.
-        frame = cv.resize(frame, (480, 480))
+        frame = cv.resize(frame, (640, 480))
 
         # Convert the frame from BGR to HSV color space to easily identify a colour
         hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV) 
 
         # *3 Define the range of yellow color in HSV [Hue, Saturation, Value]
         # SET THESE VALUES VIA THE METHOD EXPLAINED IN THE TUTORIAL
-        ball_color_lower = np.array([20, 100, 100]) # [lower Hue, lower Saturation, lower Value]
-        ball_color_upper = np.array([30, 255, 255]) # [upper Hue, upper Saturation, upper Value]
+        ball_color_lower = np.array([15,56,56]) # [lower Hue, lower Saturation, lower Value]
+        ball_color_upper = np.array([32, 255, 255]) # [upper Hue, upper Saturation, upper Value]
 
         # Threshold the HSV image to get the colors defined above
         # Pixels in the range are set to white (255) and those that aren't are set to black (0), creating a binary mask 
@@ -45,7 +45,7 @@ def detect_yellow_ball():
             # Computes the minimum enclosing circle aroudn the largest contour
             ((x, y), radius) = cv.minEnclosingCircle(largest_contour)
             # * 4 Only consider large enough objects. If it only detects a small portion of your ball, you can test higher radius values to capture more of the ball
-            if radius > 10:
+            if radius > 25:
                 # Draw a yellow circle around the ball
                 cv.circle(frame, (int(x), int(y)), int(radius), (0, 255, 255), 2)
                 # Draw a red dot in the center of the ball
@@ -67,3 +67,4 @@ def detect_yellow_ball():
 
 # Call the function to detect the yellow ball
 detect_yellow_ball()
+
