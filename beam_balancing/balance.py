@@ -20,14 +20,15 @@ class PID:
         if dt <= 0:
             return 0.0
         # error = target - current
+        # error = (current - target) 
 
-        error = current - target
+        error = (current - target) if abs((current - target)) > 0.03 else 0
         self.integral += error * dt
         derivative = (error - self.prev_error) / dt
         output = self.Kp * error + self.Ki * self.integral + self.Kd * derivative
-        self.prev_error = error
+        self.prev_error = error 
         self.last_time = now
-        return output
+        return output 
 
 
 
@@ -189,8 +190,10 @@ if __name__ == "__main__":
         "camera_index": 0,
         "lower_ball_rgb": (170, 80, 0),
         "upper_ball_rgb": (250, 175, 80),
-        "lower_red_rgb": (190, 40, 50),
-        "upper_red_rgb": (255, 90, 90),
+        # "lower_red_rgb": (190, 40, 50),
+        # "upper_red_rgb": (255, 90, 90),
+        "lower_red_rgb": (170, 20, 30),
+        "upper_red_rgb": (255, 110, 110),
         "angle_min": 149.0,
         "angle_max": 179.0,
         "level_angle": 164.0,
@@ -199,7 +202,7 @@ if __name__ == "__main__":
     # pid = PID(Kp=70, Ki=5, Kd=20.5)
 
     # pid = PID(Kp=70, Ki=15, Kd=20.5)
-    pid = PID(Kp=55, Ki=15, Kd=24.0)
+    pid = PID(Kp=35, Ki=15, Kd=24.0)
 
     # pid = PID(Kp=7, Ki=2, Kd=0.5)
     # pid = PID(Kp=10, Ki=5, Kd=1.5)
