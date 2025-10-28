@@ -349,7 +349,7 @@ def run_real_time_simulation() -> None:
 
         return (platform, *motor_lines, *push_lines, ball_scatter, trail_line)
 
-    animation.FuncAnimation(
+    ani = animation.FuncAnimation(
         fig, update, init_func=init, interval=0, blit=False, repeat=True
     )
     plt.tight_layout()
