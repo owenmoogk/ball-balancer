@@ -1,7 +1,5 @@
-from vpython import sphere, box, cylinder, vector, rate, scene
 import numpy as np
 import math
-from time import sleep
 
 MOTOR_LINK_LEN = 10.0
 BAR_LINK_LEN = 10.0
@@ -54,10 +52,9 @@ def plane_normal_from_pose(roll, pitch):
 def ball_acceleration_on_plane(roll, pitch, ball_radius, rolling=True, g=G):
     n = plane_normal_from_pose(roll, pitch)
     g_vec = np.array([0, 0, -g])
-    # component of g parallel to plane
     a_parallel = g_vec - np.dot(g_vec, n) * n
     if np.linalg.norm(a_parallel) > 0:
-        a_parallel /= np.linalg.norm(a_parallel)  # direction along plane
+        a_parallel /= np.linalg.norm(a_parallel)
         a_mag = g * math.sin(math.acos(np.dot(n, [0, 0, 1])))
         if rolling:
             a_mag /= 1 + (2 / 5)
@@ -87,37 +84,26 @@ class Ball:
     def update(self, dt, plane_pose, rolling=True):
         roll, pitch, z = plane_pose
         R = rotation_matrix(roll, pitch)
-        n = R @ np.array([0.0, 0.0, 1.0])  # normal in world frame
+        n = R @ np.array([0.0, 0.0, 1.0])
         n = n / np.linalg.norm(n)
 
-        # Plane passes through (0,0,z), so plane equation: n · (x - [0,0,z]) = 0
         plane_point = np.array([0.0, 0.0, z])
-        plane_offset = np.dot(n, plane_point)  # n · r0
+        plane_offset = np.dot(n, plane_point)
 
-        # Gravity acceleration parallel to plane
         g_vec = np.array([0.0, 0.0, -G])
         a_parallel = g_vec - np.dot(g_vec, n) * n
-
         if rolling:
-            a_parallel /= (1.0 + 2.0/5.0)  # I = 2/5 m r^2 for solid sphere
+            a_parallel /= 1.0 + 2.0 / 5.0
 
         self.accel = a_parallel
-
-        # Integrate velocity
         self.vel += self.accel * dt
-
-        # Remove any velocity component perpendicular to plane (frictionless in normal direction)
         self.vel -= np.dot(self.vel, n) * n
-
-        # Integrate position
         self.pos += self.vel * dt
 
-        # === PROJECT BALL CENTER ONTO PLANE + OFFSET BY RADIUS ===
         signed_dist = np.dot(self.pos, n) - plane_offset
         self.pos = self.pos - signed_dist * n + n * self.radius
 
         return self.pos.copy(), self.vel.copy(), self.accel.copy()
-
 
 
 class StewartPlatformSimulator:
@@ -150,77 +136,175 @@ class StewartPlatformSimulator:
         }
 
 
+# --------------------------------------------------------------
+#  MATPLOTLIB 3-D VISUALISATION
+# --------------------------------------------------------------
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+
+
 def run_visual_simulation():
-    # === setup simulation ===
     bases = [(-0.6, -0.4, 0), (0.6, -0.4, 0), (0, 0.8, 0)]
-    contacts = [(-0.6, -0.4), (0.6, -0.4), (0, 0.8)]    
+    contacts = [(-0.6, -0.4), (0.6, -0.4), (0, 0.8)]
     sim = StewartPlatformSimulator(
-        plane_pose=(0.0, 0.0, TABLE_HEIGHT), dt=0.01, bases=bases, contacts_local=contacts
+        plane_pose=(0.0, 0.0, TABLE_HEIGHT),
+        dt=0.01,
+        bases=bases,
+        contacts_local=contacts,
     )
 
-    # === setup VPython scene ===
-    scene.title = "Stewart Platform Simulation"
-    scene.center = vector(0, 0, 0)
-    scene.forward = vector(0, 1, -0.3)
-    scene.width = 1200
-    scene.height = 800
-    scene.range = 2  # zoom out so we see the entire structure
+    # === Matplotlib figure ===
+    fig = plt.figure(figsize=(10, 8))
+    ax = fig.add_subplot(111, projection="3d")
+    ax.set_title("Stewart Platform – Matplotlib 3-D")
+    ax.set_xlim(-1.2, 1.2)
+    ax.set_ylim(-1.2, 1.2)
+    ax.set_zlim(0, 1.0)
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
+    ax.view_init(elev=30, azim=-60)
 
-    platform = box(
-        pos=vector(0, 0,TABLE_HEIGHT),
-        size=vector(TABLE_HEIGHT, TABLE_HEIGHT, 0.01),
-        color=vector(0.4, 0.8, 0.4),
-        opacity=0.6,
-        up=vector(0,0,1)
-    )
+    # --- platform (thin box) ---
+    from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 
-    # legs = [cylinder(pos=vector(*b), axis=vector(0,0,TABLE_HEIGHT), radius=0.03) for b in bases]
-    # scale ball to visible size (1.0 instead of 0.05)
-    ball = sphere(
-        pos=vector(0, 0, TABLE_HEIGHT + BALL_RADIUS),
-        color=vector(1, 0.2, 0.2),
-        radius=BALL_RADIUS,
-        make_trail=True,
-    )
+    # --- Add this at the top with other imports ---
+    from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
-    # === simulation loop ===
-    T = 25.0
-    steps = int(T / sim.dt)
-    for step in range(steps):
-        rate(100)
+    # --- Replace the platform initialization ---
+    platform = None  # will be a Poly3DCollection
 
-        # oscillate the platform (you can replace this motion)
-        roll = 0.1 * math.sin(2 * math.pi * step * sim.dt * 0.5/1000)
-        pitch = 0.1 * math.cos(2 * math.pi * step * sim.dt * 0.5)
+
+    def create_rotated_platform(ax, roll, pitch, z, size):
+        """Create a rotated platform as Poly3DCollection"""
+        half = size / 2
+        # 8 corners of the platform (local frame, z=0)
+        verts_local = np.array(
+            [
+                [-half, -half, 0],
+                [half, -half, 0],
+                [half, half, 0],
+                [-half, half, 0],
+                [-half, -half, 0.01],
+                [half, -half, 0.01],
+                [half, half, 0.01],
+                [-half, half, 0.01],
+            ]
+        )
+
+        R = rotation_matrix(roll, pitch)
+        verts_rot = (R @ verts_local.T).T + np.array([0, 0, z])
+
+        # 6 faces (quads)
+        faces = [
+            [verts_rot[0], verts_rot[1], verts_rot[2], verts_rot[3]],  # bottom
+            [verts_rot[4], verts_rot[5], verts_rot[6], verts_rot[7]],  # top
+            [verts_rot[0], verts_rot[1], verts_rot[5], verts_rot[4]],  # front
+            [verts_rot[1], verts_rot[2], verts_rot[6], verts_rot[5]],  # right
+            [verts_rot[2], verts_rot[3], verts_rot[7], verts_rot[6]],  # back
+            [verts_rot[3], verts_rot[0], verts_rot[4], verts_rot[7]],  # left
+        ]
+
+        poly = Poly3DCollection(
+            faces, facecolors=(0.4, 0.8, 0.4, 0.6), edgecolor="k", linewidths=1
+        )
+        ax.add_collection3d(poly)
+        return poly
+
+    # --- legs (cylinders) ---
+    leg_artists = []
+    for b in bases:
+        leg = ax.plot([], [], [], color="gray", linewidth=4)[0]
+        leg_artists.append(leg)
+
+    # --- ball (scatter) ---
+    ball_scatter = ax.scatter([], [], [], c="red", s=200, depthshade=True)
+
+    # --- ball trail (line) ---
+    (trail_line,) = ax.plot([], [], [], "r-", linewidth=1, alpha=0.6)
+
+    trail_x, trail_y, trail_z = [], [], []
+
+    # ------------------------------------------------------------------
+    def init():
+        nonlocal platform
+        if platform is not None:
+            platform.remove()
+        platform = create_rotated_platform(ax, 0, 0, TABLE_HEIGHT, TABLE_HEIGHT*2)
+        return platform, *leg_artists, ball_scatter, trail_line
+
+    def update(frame):
+        # ---- platform motion (same as original) ----
+        t = frame * sim.dt
+        roll = 1 * math.sin(2 * math.pi * t * 0.5)
+        pitch = 0.2 * math.cos(2 * math.pi * t * 0.5)
         z = TABLE_HEIGHT
         target_pose = (roll, pitch, z)
 
         state = sim.step(target_pose)
         roll, pitch, z = state["plane_pose"]
         ball_pos = state["ball_pos"]
+
         R = rotation_matrix(roll, pitch)
 
-        # --- update platform transform ---
-        platform.pos = vector(0, 0, z)
-        # platform.axis = vector(R[0, 2], R[1, 2], R[2, 2])
-        platform.up = vector(R[0, 1], R[1, 1], R[2, 1])
+        # ---- update platform ----
+        # remove old bar3d and draw new one (Matplotlib has no mutable bar3d)
+        nonlocal platform
+        if platform is not None:
+            platform.remove()
+        platform = create_rotated_platform(ax, roll, pitch, z, TABLE_HEIGHT*2)
 
-        # --- update leg geometry ---
-        # for i, leg in enumerate(legs):
-        #     p_local = np.array([contacts[i][0], contacts[i][1], 0])
-        #     P_world = R @ p_local + np.array([0, 0, z])
-        #     leg.pos = vector(*bases[i])
-        #     leg.axis = vector(*(P_world - np.array(bases[i])))
+        # rotate the platform surface by setting its normal as "up"
+        # (visual trick: we tilt a thin box by rotating its vertices)
+        # For simplicity we keep the box axis-aligned and just move it.
 
-        # --- update ball position ---
-        # scale its z position so it stays above the platform visually
-        ball.pos = vector(ball_pos[0], ball_pos[1], ball_pos[2])
+        # ---- update legs ----
+        for i, leg in enumerate(leg_artists):
+            p_local = np.array([contacts[i][0], contacts[i][1], 0.0])
+            P_world = R @ p_local + np.array([0.0, 0.0, z])
+            base_pt = np.array(bases[i])
+            leg.set_data_3d(
+                [base_pt[0], P_world[0]],
+                [base_pt[1], P_world[1]],
+                [base_pt[2], P_world[2]],
+            )
 
-    sleep(0.5)
+        # ---- update ball ----
+        ball_scatter._offsets3d = ([ball_pos[0]], [ball_pos[1]], [ball_pos[2]])
+
+        # ---- update trail ----
+        nonlocal trail_x, trail_y, trail_z
+        trail_x.append(ball_pos[0])
+        trail_y.append(ball_pos[1])
+        trail_z.append(ball_pos[2])
+        # keep only last N points
+        N = 300
+        if len(trail_x) > N:
+            trail_x = trail_x[-N:]
+            trail_y = trail_y[-N:]
+            trail_z = trail_z[-N:]
+        trail_line.set_data_3d(trail_x, trail_y, trail_z)
+
+        return platform, *leg_artists, ball_scatter, trail_line
+
+    # ------------------------------------------------------------------
+    T = 25.0
+    steps = int(T / sim.dt)
+    ani = animation.FuncAnimation(
+        fig,
+        update,
+        frames=steps,
+        init_func=init,
+        interval=sim.dt * 1000 * 0.5,
+        blit=False,
+        repeat=False,
+    )
+
+    plt.tight_layout()
+    plt.show()
     print("Simulation complete.")
 
 
 if __name__ == "__main__":
     run_visual_simulation()
-    sleep(10000)
