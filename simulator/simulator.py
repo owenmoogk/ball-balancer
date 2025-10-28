@@ -4,34 +4,49 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import matplotlib.animation as animation
 import time
+from typing import Tuple, List, Optional, Sequence, Any
+from numpy.typing import NDArray
+import numpy.typing as npt
 
 # ------------------------------------------------------------------
 #  Constants
 # ------------------------------------------------------------------
-MOTOR_LINK_LEN = 0.35
-PUSH_LINK_LEN = 0.35
-BALL_RADIUS = 0.02
-G = 9.81
-TABLE_HEIGHT = 0.4
-PLATFORM_SIDE = 2.0
-I_SPHERE = (2.0 / 5.0) * BALL_RADIUS**2
+MOTOR_LINK_LEN: float = 0.35
+PUSH_LINK_LEN: float = 0.35
+BALL_RADIUS: float = 0.02
+G: float = 9.81
+TABLE_HEIGHT: float = 0.4
+PLATFORM_SIDE: float = 2.0
+I_SPHERE: float = (2.0 / 5.0) * BALL_RADIUS**2
 
-DT = 0.005
-TARGET_FPS = 60
+DT: float = 0.005
+TARGET_FPS: int = 60
+
+BASES: List[Tuple[float, float, float]] = [
+    (-0.6, -0.4, 0.0),
+    (0.6, -0.4, 0.0),
+    (0.0, 0.8, 0.0),
+]
+CONTACTS: List[Tuple[float, float]] = [(-0.6, -0.4), (0.6, -0.4), (0.0, 0.8)]
 
 
 # ------------------------------------------------------------------
 #  Helper functions
 # ------------------------------------------------------------------
-def rotation_matrix(roll, pitch):
+def rotation_matrix(roll: float, pitch: float) -> NDArray[np.float64]:
     cx, sx = np.cos(roll), np.sin(roll)
     cy, sy = np.cos(pitch), np.sin(pitch)
     R_x = np.array([[1, 0, 0], [0, cx, -sx], [0, sx, cx]])
     R_y = np.array([[cy, 0, sy], [0, 1, 0], [-sy, 0, cy]])
-    return R_y @ R_x
+    return R_y @ R_x  # type: ignore
 
 
-def bearing_point_exact(base, p_world, l1=MOTOR_LINK_LEN, l2=PUSH_LINK_LEN):
+def bearing_point_exact(
+    base: Sequence[float],
+    p_world: Sequence[float],
+    l1: float,
+    l2: float,
+) -> Tuple[bool, Optional[NDArray[np.float64]]]:
     B = np.array(base, dtype=float)
     P = np.array(p_world, dtype=float)
     d = np.linalg.norm(P - B)
@@ -40,8 +55,9 @@ def bearing_point_exact(base, p_world, l1=MOTOR_LINK_LEN, l2=PUSH_LINK_LEN):
     v = (P - B) / d
     a = (l1**2 - l2**2 + d**2) / (2.0 * d)
     h2 = l1**2 - a**2
-    if h2 < 0:
+    if h2 < -1e-12:
         return False, None
+    h2 = max(h2, 0.0)
     h = np.sqrt(h2)
     M = B + a * v
     tmp = (
@@ -64,12 +80,12 @@ def bearing_point_exact(base, p_world, l1=MOTOR_LINK_LEN, l2=PUSH_LINK_LEN):
 #  Ball – pure rolling
 # ------------------------------------------------------------------
 class Ball:
-    def __init__(self, pos=(0, 0, 0)):
-        self.pos = np.array(pos, dtype=float)
-        self.vel = np.zeros(3)
-        self.radius = BALL_RADIUS
+    def __init__(self, pos: Tuple[float, float, float] = (0.0, 0.0, 0.0)):
+        self.pos: NDArray[np.float64] = np.array(pos, dtype=float)
+        self.vel: NDArray[np.float64] = np.zeros(3)
+        self.radius: float = BALL_RADIUS
 
-    def update(self, dt, plane_pose):
+    def update(self, dt: float, plane_pose: Tuple[float, float, float]) -> None:
         roll, pitch, z = plane_pose
         R = rotation_matrix(roll, pitch)
         n = R @ np.array([0.0, 0.0, 1.0])
@@ -102,25 +118,35 @@ class Ball:
 # ------------------------------------------------------------------
 class TwoBarLink:
     def __init__(
-        self, base_point, contact_point_local
+        self,
+        base_point: Tuple[float, float, float],
+        contact_point_local: Tuple[float, float],
     ):
-        self.base = np.array(base_point, dtype=float)
-        self.contact_local = np.array(
+        self.base: NDArray[np.float64] = np.array(base_point, dtype=float)
+        self.contact_local: NDArray[np.float64] = np.array(
             [contact_point_local[0], contact_point_local[1], 0.0]
         )
-        self.l1 = MOTOR_LINK_LEN
-        self.l2 = PUSH_LINK_LEN
+        self.l1: float = MOTOR_LINK_LEN
+        self.l2: float = PUSH_LINK_LEN
 
 
 class StewartPlatformSimulator:
-    def __init__(self, plane_pose, dt, bases, contacts_local):
-        self.dt = dt
-        self.plane_pose = np.array(plane_pose, dtype=float)
-        self.links = [TwoBarLink(bases[i], contacts_local[i]) for i in range(3)]
-        self.ball = Ball(pos=(0.0, 0.0, plane_pose[2] + 0.02))
-        self.sim_time = 0.0
+    def __init__(
+        self,
+        plane_pose: Tuple[float, float, float],
+        dt: float,
+        bases: List[Tuple[float, float, float]],
+        contacts_local: List[Tuple[float, float]],
+    ):
+        self.dt: float = dt
+        self.plane_pose: NDArray[np.float64] = np.array(plane_pose, dtype=float)
+        self.links: List[TwoBarLink] = [
+            TwoBarLink(bases[i], contacts_local[i]) for i in range(3)
+        ]
+        self.ball: Ball = Ball(pos=(0.0, 0.0, plane_pose[2] + 0.02))
+        self.sim_time: float = 0.0
 
-    def step(self, target_pose):
+    def step(self, target_pose: Tuple[float, float, float]) -> None:
         self.plane_pose = np.array(target_pose, dtype=float)
         self.ball.update(self.dt, self.plane_pose)
         self.sim_time += self.dt
@@ -129,7 +155,13 @@ class StewartPlatformSimulator:
 # ------------------------------------------------------------------
 #  Visual helpers
 # ------------------------------------------------------------------
-def create_rotated_platform(ax, roll, pitch, z, side):
+def create_rotated_platform(
+    ax: plt.Axes,
+    roll: float,
+    pitch: float,
+    z: float,
+    side: float,
+) -> Poly3DCollection:
     half = side / 2.0
     verts_local = np.array(
         [
@@ -160,34 +192,42 @@ def create_rotated_platform(ax, roll, pitch, z, side):
     return poly
 
 
-def leg_points_rigid(base, contact_local, plane_pose):
+def leg_points_rigid(
+    base: NDArray[np.float64],
+    contact_local: NDArray[np.float64],
+    plane_pose: Tuple[float, float, float],
+    l1: float,
+    l2: float,
+) -> Optional[
+    Tuple[
+        Tuple[NDArray[np.float64], NDArray[np.float64]],
+        Tuple[NDArray[np.float64], NDArray[np.float64]],
+    ]
+]:
     roll, pitch, z = plane_pose
     R = rotation_matrix(roll, pitch)
     P_world = R @ np.array([contact_local[0], contact_local[1], 0.0]) + np.array(
         [0.0, 0.0, z]
     )
-    ok, bearing = bearing_point_exact(base, P_world)
+    ok, bearing = bearing_point_exact(base, P_world, l1, l2)
     if not ok:
-        bearing = np.array(base) + np.array([0.0, 0.0, MOTOR_LINK_LEN])
-    return (np.array(base), bearing), (bearing, P_world)
+        return None
+    return (base.copy(), bearing), (bearing.copy(), P_world.copy())
 
 
 # ------------------------------------------------------------------
 #  Real-time animation
 # ------------------------------------------------------------------
-def run_real_time_simulation():
-    bases = [(-0.6, -0.4, 0.0), (0.6, -0.4, 0.0), (0.0, 0.8, 0.0)]
-    contacts = [(-0.6, -0.4), (0.6, -0.4), (0.0, 0.8)]
-
+def run_real_time_simulation() -> None:
     sim = StewartPlatformSimulator(
         plane_pose=(0.0, 0.0, TABLE_HEIGHT),
         dt=DT,
-        bases=bases,
-        contacts_local=contacts,
+        bases=BASES,
+        contacts_local=CONTACTS,
     )
 
     fig = plt.figure(figsize=(10, 8))
-    ax = fig.add_subplot(111, projection="3d")
+    ax: plt.Axes3D = fig.add_subplot(111, projection="3d")
     ax.set_title("Real-Time Rolling Ball on Two-Bar Stewart Platform")
     ax.set_xlim(-1.2, 1.2)
     ax.set_ylim(-1.2, 1.2)
@@ -197,24 +237,28 @@ def run_real_time_simulation():
     ax.set_zlabel("Z")
     ax.view_init(elev=30, azim=-60)
 
-    platform = None
-    motor_lines = [ax.plot([], [], [], color="steelblue", lw=5)[0] for _ in bases]
-    push_lines = [ax.plot([], [], [], color="darkorange", lw=4)[0] for _ in bases]
+    platform: Optional[Poly3DCollection] = None
+    motor_lines: List[Any] = [
+        ax.plot([], [], [], color="steelblue", lw=5)[0] for _ in BASES
+    ]
+    push_lines: List[Any] = [
+        ax.plot([], [], [], color="darkorange", lw=4)[0] for _ in BASES
+    ]
     ball_scatter = ax.scatter([], [], [], c="red", s=250, depthshade=True)
     (trail_line,) = ax.plot([], [], [], "r-", lw=1, alpha=0.6)
-    trail = [[], [], []]
+    trail: List[List[float]] = [[], [], []]
 
     last_frame_time = time.time()
     frame_interval = 1.0 / TARGET_FPS
 
-    def init():
+    def init() -> Tuple[Any, ...]:
         nonlocal platform
         if platform is not None:
             platform.remove()
         platform = create_rotated_platform(ax, 0, 0, TABLE_HEIGHT, PLATFORM_SIDE)
         return (platform, *motor_lines, *push_lines, ball_scatter, trail_line)
 
-    def update(frame):
+    def update(frame: int) -> Tuple[Any, ...]:
         nonlocal platform, last_frame_time, trail
 
         now = time.time()
@@ -238,8 +282,15 @@ def run_real_time_simulation():
             platform.remove()
         platform = create_rotated_platform(ax, roll, pitch, z, PLATFORM_SIDE)
 
-        for i, (base, contact) in enumerate(zip(bases, contacts)):
-            (b1, br), (br2, p) = leg_points_rigid(base, contact, (roll, pitch, z))
+        for i, link in enumerate(sim.links):
+            segments = leg_points_rigid(
+                link.base, link.contact_local, (roll, pitch, z), link.l1, link.l2
+            )
+            if segments is None:
+                motor_lines[i].set_data_3d([], [], [])
+                push_lines[i].set_data_3d([], [], [])
+                continue
+            (b1, br), (br2, p) = segments
             motor_lines[i].set_data_3d([b1[0], br[0]], [b1[1], br[1]], [b1[2], br[2]])
             push_lines[i].set_data_3d([br2[0], p[0]], [br2[1], p[1]], [br2[2], p[2]])
 
