@@ -7,14 +7,15 @@ from numpy.typing import NDArray
 # ------------------------------------------------------------------
 #  CONSTANTS
 # ------------------------------------------------------------------
+# Units in [m]
 MOTOR_LINK_LEN = 0.08
-PUSH_LINK_LEN = 0.09
+PUSH_LINK_LEN = 0.095
 BALL_RADIUS = 0.02
 G = 9.81
-TABLE_HEIGHT = 0.07
-PLATFORM_RADIUS = 0.14
-BASE_RADIUS = 0.045
-PLATFORM_THICKNESS = 0.01
+TABLE_HEIGHT = 0.1
+PLATFORM_RADIUS = 0.15
+BASE_RADIUS = 0.8665 / np.sqrt(3)
+PLATFORM_THICKNESS = 0.003
 
 angles = np.deg2rad([0, 120, 240])
 BASES = [(BASE_RADIUS*np.cos(a), BASE_RADIUS*np.sin(a), 0.0) for a in angles]
