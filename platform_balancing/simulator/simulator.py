@@ -3,6 +3,10 @@ from typing import Tuple, List
 from numpy.typing import NDArray
 from settings import Settings
 from kinematics import rotation_matrix
+from visualizer import Visualizer
+import time
+from pid import PIDController
+
 
 class Ball:
     def __init__(self, pos: Tuple[float, float, float] = (0.0, 0.0, 0.0)):
@@ -76,3 +80,22 @@ class StewartPlatformSimulator:
         self.ball.update(self.dt, self.plane_pose)
         self.sim_time += self.dt
 
+
+
+def simulation_main():
+    sim = StewartPlatformSimulator()
+    pid = PIDController(kp=5, ki=0, kd=5)
+    vis = Visualizer(sim=sim)
+    angles = (0, 0)
+    for step in range(10000):
+        t_start = time.time()
+        sim.step(target_pose=(angles[0], angles[1], Settings.TABLE_HEIGHT))
+        if step % 10 == 0:
+            vis.update()
+        angles = pid.compute_angles(
+            error=sim.ball.pos, velocity=sim.ball.vel, dt=sim.dt
+        )
+        elapsed = time.time() - t_start
+        sleep_time = sim.dt - elapsed
+        if sleep_time > 0:
+            time.sleep(sleep_time)
