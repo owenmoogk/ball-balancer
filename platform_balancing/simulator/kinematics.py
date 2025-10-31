@@ -58,37 +58,46 @@ def bearing_point_exact(
     bearing1 = M + h * n_perp
     bearing2 = M - h * n_perp
 
-    print(bearing1, bearing2)
-
     bearing = bearing1 if bearing1[2] < bearing2[2] else bearing2
 
     return True, bearing
 
 def motor_angle_deg(base, bearing):
-    radial = base.copy(); radial[2] = 0
-    if np.linalg.norm(radial) < 1e-9: radial = np.array([1,0,0])
-    e1 = radial / np.linalg.norm(radial)
-    n = np.cross(e1, np.array([0,0,1])); n /= np.linalg.norm(n)
-    e2 = np.cross(n, e1)
+    base = np.array(base, dtype=float)
+    bearing = np.array(bearing, dtype=float)
     L = bearing - base
-    Lp = L - np.dot(L, n)*n
-    x, y = np.dot(Lp, e1), np.dot(Lp, e2)
-    return float(np.rad2deg(np.arctan2(y, x)))
+    x, y, z = L
+    angle_rad = np.arctan2(z, np.hypot(x, y))
+    return float(np.rad2deg(angle_rad))
 
-def leg_points_rigid(base, contact_local, plane_pose, l1, l2):
+def leg_points_rigid(
+    base: NDArray[np.float64],
+    contact_local: NDArray[np.float64],
+    plane_pose: Tuple[float, float, float],
+    l1: float,
+    l2: float,
+) -> Optional[
+    Tuple[
+        Tuple[NDArray[np.float64], NDArray[np.float64]],
+        Tuple[NDArray[np.float64], NDArray[np.float64]],
+    ]
+]:
     roll, pitch, z = plane_pose
     R = rotation_matrix(roll, pitch)
     P_world = R @ np.array([contact_local[0], contact_local[1], 0.0]) + np.array([0, 0, z])
     ok, bearing = bearing_point_exact(base, P_world, l1, l2)
-    if not ok: return None
-    return base, bearing
+    if not ok:
+        return None
+    return (base.copy(), bearing), (bearing.copy(), P_world.copy())
 
 def solve_motor_angles_for_plane(roll_deg, pitch_deg, z=Settings.TABLE_HEIGHT):
-    roll = np.deg2rad(roll_deg); pitch = np.deg2rad(pitch_deg)
+    roll = np.deg2rad(roll_deg)
+    pitch = np.deg2rad(pitch_deg)
     out = np.full(3, np.nan)
     for i, (b, c) in enumerate(zip(Settings.BASES, Settings.CONTACTS)):
-        segs = leg_points_rigid(np.array(b), np.array([c[0], c[1], 0.0]), (roll, pitch, z), Settings.MOTOR_LINK_LEN, Settings.PUSH_LINK_LEN)
-        if segs is None: continue
-        b1, br = segs
-        out[i] = motor_angle_deg(b1, br)
+        leg_points = leg_points_rigid(np.array(b), np.array([c[0], c[1], 0.0]), (roll, pitch, z), Settings.MOTOR_LINK_LEN, Settings.PUSH_LINK_LEN)
+        if leg_points:
+            leg_1_points, _ = leg_points
+            base_point, bearing_point = leg_1_points
+            out[i] = motor_angle_deg(base_point, bearing_point)
     return out

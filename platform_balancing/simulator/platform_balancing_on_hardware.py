@@ -35,7 +35,7 @@ def main():
                 if np.any(np.isnan(th)):
                     print("Unreachable configuration.")
                     continue
-                servo_cmds = 86*2 - th
+                servo_cmds = 86 - th
                 msg = f"{servo_cmds[0]:.1f} {servo_cmds[1]:.1f} {servo_cmds[2]:.1f}\n"
                 n = ser.write(msg.encode())
                 print(f"-> {msg.strip()}  ({n} bytes)")

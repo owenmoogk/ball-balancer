@@ -4,7 +4,7 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from typing import Tuple, List, Optional, Any
 from numpy.typing import NDArray
 from settings import Settings
-from kinematics import rotation_matrix, bearing_point_exact
+from kinematics import rotation_matrix, leg_points_rigid
 
 def create_circular_platform(
     ax: plt.Axes,
@@ -53,32 +53,6 @@ def create_circular_platform(
     return poly
 
 
-def leg_points_rigid(
-    base: NDArray[np.float64],
-    contact_local: NDArray[np.float64],
-    plane_pose: Tuple[float, float, float],
-    l1: float,
-    l2: float,
-) -> Optional[
-    Tuple[
-        Tuple[NDArray[np.float64], NDArray[np.float64]],
-        Tuple[NDArray[np.float64], NDArray[np.float64]],
-    ]
-]:
-    roll, pitch, z = plane_pose
-    R = rotation_matrix(roll, pitch)
-    P_world = R @ np.array([contact_local[0], contact_local[1], 0.0]) + np.array(
-        [0.0, 0.0, z]
-    )
-    ok, bearing = bearing_point_exact(base, P_world, l1, l2)
-    if not ok:
-        return None
-    return (base.copy(), bearing), (bearing.copy(), P_world.copy())
-
-
-# ------------------------------------------------------------------
-#  Visualizer
-# ------------------------------------------------------------------
 class Visualizer:
     def __init__(self, sim):
         self.sim = sim
@@ -112,7 +86,6 @@ class Visualizer:
         plt.ion()
         plt.show()
 
-    # --------------------------------------------------------------
     def update(self):
         """Render the current state of the simulator."""
         sim = self.sim
