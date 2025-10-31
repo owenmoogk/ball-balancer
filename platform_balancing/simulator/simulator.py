@@ -14,7 +14,7 @@ PLATFORM_RADIUS: float = 0.5  # Radius of the circular platform
 BASE_RADIUS: float = 0.6  # Radius of the base circle
 PLATFORM_THICKNESS: float = 0.01
 
-DT: float = 0.005
+DT: float = 0.01
 TARGET_FPS: int = 60
 
 # Generate 120-degree spaced points
@@ -155,7 +155,7 @@ class StewartPlatformSimulator:
         dt: float = DT,
         bases: List[Tuple[float, float, float]] = BASES,
         contacts_local: List[Tuple[float, float]] = CONTACTS,
-        ball_pos: Tuple[float, float] = (1,0)
+        ball_pos: Tuple[float, float] = (0.5,0.5)
     ):
         self.dt: float = dt
         self.plane_pose: NDArray[np.float64] = (0,0,TABLE_HEIGHT)  # [roll, pitch, height]
