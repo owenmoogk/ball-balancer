@@ -47,7 +47,7 @@ def create_circular_platform(
         facecolors=(0.4, 0.8, 0.4, 0.7),
         edgecolor="k",
         linewidths=0.5,
-        alpha=0.8,
+        alpha=0.3,
     )
     ax.add_collection3d(poly)
     return poly
