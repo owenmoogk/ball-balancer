@@ -4,7 +4,7 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from typing import Tuple, List, Optional, Any
 from numpy.typing import NDArray
 from settings import Settings
-from simulator import rotation_matrix, bearing_point_exact
+from kinematics import rotation_matrix, bearing_point_exact
 
 def create_circular_platform(
     ax: plt.Axes,

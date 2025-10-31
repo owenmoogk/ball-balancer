@@ -1,75 +1,9 @@
 import numpy as np
-from typing import Tuple, List, Optional, Sequence
+from typing import Tuple, List
 from numpy.typing import NDArray
 from settings import Settings
+from kinematics import rotation_matrix
 
-def rotation_matrix(roll: float, pitch: float) -> NDArray[np.float64]:
-    cx, sx = np.cos(roll), np.sin(roll)
-    cy, sy = np.cos(pitch), np.sin(pitch)
-    R_x = np.array([[1, 0, 0], [0, cx, -sx], [0, sx, cx]])
-    R_y = np.array([[cy, 0, sy], [0, 1, 0], [-sy, 0, cy]])
-    return R_y @ R_x  # type: ignore
-
-
-def bearing_point_exact(
-    base: Sequence[float],
-    p_world: Sequence[float],
-    l1: float,
-    l2: float,
-) -> Tuple[bool, Optional[NDArray[np.float64]]]:
-    B = np.array(base, dtype=np.float64)
-    P = np.array(p_world, dtype=np.float64)
-    O = np.array([0.0, 0.0, 0.0])
-
-    d = np.linalg.norm(P - B)
-    if d > l1 + l2 + 1e-9 or d < abs(l1 - l2) - 1e-9 or d < 1e-9:
-        return False, None
-
-    v = (P - B) / d
-    a = (l1**2 - l2**2 + d**2) / (2.0 * d)
-    h2 = l1**2 - a**2
-    if h2 < -1e-12:
-        return False, None
-    h2 = max(h2, 0.0)
-    h = np.sqrt(h2)
-
-    M = B + a * v
-
-    # Define radial direction in XY plane
-    radial_dir = B - O
-    radial_dir[2] = 0.0
-    norm = np.linalg.norm(radial_dir)
-    if norm < 1e-9:
-        radial_dir = np.array([1.0, 0.0, 0.0])
-    else:
-        radial_dir /= norm
-
-    # Plane normal = cross(radial, Z)
-    plane_normal = np.cross(radial_dir, np.array([0.0, 0.0, 1.0]))
-    if np.linalg.norm(plane_normal) < 1e-9:
-        plane_normal = np.array([0.0, 1.0, 0.0])
-    else:
-        plane_normal /= np.linalg.norm(plane_normal)
-
-    # Perpendicular in plane
-    n_perp = np.cross(v, plane_normal)
-    n_perp /= np.linalg.norm(n_perp)
-
-    bearing1 = M + h * n_perp
-    bearing2 = M - h * n_perp
-
-    print(bearing1, bearing2)
-
-    bearing = (
-        bearing1 if bearing1[2] < bearing2[2] else bearing2
-    )
-
-    return True, bearing
-
-
-# ------------------------------------------------------------------
-#  Ball – pure rolling
-# ------------------------------------------------------------------
 class Ball:
     def __init__(self, pos: Tuple[float, float, float] = (0.0, 0.0, 0.0)):
         self.pos: NDArray[np.float64] = np.array(pos, dtype=float)
