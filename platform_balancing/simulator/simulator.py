@@ -1,37 +1,8 @@
 import numpy as np
 from typing import Tuple, List, Optional, Sequence
 from numpy.typing import NDArray
+from settings import Settings
 
-# ------------------------------------------------------------------
-#  Constants
-# ------------------------------------------------------------------
-MOTOR_LINK_LEN: float = 0.3
-PUSH_LINK_LEN: float = 0.25
-BALL_RADIUS: float = 0.02
-G: float = 9.81
-TABLE_HEIGHT: float = 0.4
-PLATFORM_RADIUS: float = 0.5  # Radius of the circular platform
-BASE_RADIUS: float = 0.6  # Radius of the base circle
-PLATFORM_THICKNESS: float = 0.01
-
-DT: float = 0.005
-TARGET_FPS: int = 60
-
-# Generate 120-degree spaced points
-angles = np.deg2rad([0, 120, 240])
-BASES: List[Tuple[float, float, float]] = [
-    (BASE_RADIUS * np.cos(a), BASE_RADIUS * np.sin(a), 0.0) for a in angles
-]
-CONTACTS: List[Tuple[float, float]] = [
-    (PLATFORM_RADIUS * np.cos(a), PLATFORM_RADIUS * np.sin(a)) for a in angles
-]
-
-I_SPHERE: float = (2.0 / 5.0) * BALL_RADIUS**2
-
-
-# ------------------------------------------------------------------
-#  Helper functions
-# ------------------------------------------------------------------
 def rotation_matrix(roll: float, pitch: float) -> NDArray[np.float64]:
     cx, sx = np.cos(roll), np.sin(roll)
     cy, sy = np.cos(pitch), np.sin(pitch)
@@ -87,9 +58,10 @@ def bearing_point_exact(
     bearing1 = M + h * n_perp
     bearing2 = M - h * n_perp
 
-    gravity = np.array([0.0, 0.0, -1.0])
+    print(bearing1, bearing2)
+
     bearing = (
-        bearing1 if np.dot(bearing1, gravity) < np.dot(bearing2, gravity) else bearing2
+        bearing1 if bearing1[2] < bearing2[2] else bearing2
     )
 
     return True, bearing
@@ -102,7 +74,7 @@ class Ball:
     def __init__(self, pos: Tuple[float, float, float] = (0.0, 0.0, 0.0)):
         self.pos: NDArray[np.float64] = np.array(pos, dtype=float)
         self.vel: NDArray[np.float64] = np.zeros(3)
-        self.radius: float = BALL_RADIUS
+        self.radius: float = Settings.BALL_RADIUS
 
     def update(self, dt: float, plane_pose: Tuple[float, float, float]) -> None:
         roll, pitch, z = plane_pose
@@ -113,7 +85,7 @@ class Ball:
         plane_point = np.array([0.0, 0.0, z])
         plane_offset = np.dot(n, plane_point)
 
-        g_vec = np.array([0.0, 0.0, -G])
+        g_vec = np.array([0.0, 0.0, -Settings.G])
         a_parallel = g_vec - np.dot(g_vec, n) * n
         a_mag = np.linalg.norm(a_parallel)
 
@@ -122,7 +94,7 @@ class Ball:
             return
 
         direction = a_parallel / a_mag
-        a = a_mag / (1.0 + I_SPHERE / (self.radius**2))
+        a = a_mag / (1.0 + Settings.I_SPHERE / (self.radius**2))
 
         self.vel += a * direction * dt
         self.vel -= np.dot(self.vel, n) * n
@@ -145,20 +117,20 @@ class TwoBarLink:
         self.contact_local: NDArray[np.float64] = np.array(
             [contact_point_local[0], contact_point_local[1], 0.0]
         )
-        self.l1: float = MOTOR_LINK_LEN
-        self.l2: float = PUSH_LINK_LEN
+        self.l1: float = Settings.MOTOR_LINK_LEN
+        self.l2: float = Settings.PUSH_LINK_LEN
 
 
 class StewartPlatformSimulator:
     def __init__(
         self,
-        dt: float = DT,
-        bases: List[Tuple[float, float, float]] = BASES,
-        contacts_local: List[Tuple[float, float]] = CONTACTS,
-        ball_pos: Tuple[float, float] = (0.5,0.5)
+        dt: float = Settings.DT,
+        bases: List[Tuple[float, float, float]] = Settings.BASES,
+        contacts_local: List[Tuple[float, float]] = Settings.CONTACTS,
+        ball_pos: Tuple[float, float] = (0.05,0.05)
     ):
         self.dt: float = dt
-        self.plane_pose: NDArray[np.float64] = (0,0,TABLE_HEIGHT)  # [roll, pitch, height]
+        self.plane_pose: NDArray[np.float64] = (0,0,Settings.TABLE_HEIGHT)  # [roll, pitch, height]
         self.links: List[TwoBarLink] = [
             TwoBarLink(bases[i], contacts_local[i]) for i in range(3)
         ]

@@ -1,11 +1,10 @@
-from simulator import *  # noqa: F403
 import numpy as np
-import math
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from typing import Tuple, List, Optional, Any
 from numpy.typing import NDArray
-
+from settings import Settings
+from simulator import rotation_matrix, bearing_point_exact
 
 def create_circular_platform(
     ax: plt.Axes,
@@ -13,7 +12,7 @@ def create_circular_platform(
     pitch: float,
     z: float,
     radius: float,
-    thickness: float = PLATFORM_THICKNESS,
+    thickness: float = Settings.PLATFORM_THICKNESS,
     n_points: int = 64,
 ) -> Poly3DCollection:
     """Generate a circular platform mesh rotated by roll/pitch."""
@@ -83,14 +82,14 @@ def leg_points_rigid(
 class Visualizer:
     def __init__(self, sim):
         self.sim = sim
-
+        axis_limit = 0.2
         # Setup figure
         self.fig = plt.figure(figsize=(10, 8))
         self.ax: plt.Axes3D = self.fig.add_subplot(111, projection="3d")
         self.ax.set_title("Stewart Platform Simulation")
-        self.ax.set_xlim(-1.0, 1.0)
-        self.ax.set_ylim(-1.0, 1.0)
-        self.ax.set_zlim(0.0, 1.0)
+        self.ax.set_xlim(-axis_limit, axis_limit)
+        self.ax.set_ylim(-axis_limit, axis_limit)
+        self.ax.set_zlim(0.0, axis_limit)
         self.ax.set_xlabel("X")
         self.ax.set_ylabel("Y")
         self.ax.set_zlabel("Z")
@@ -98,13 +97,13 @@ class Visualizer:
 
         # Elements
         self.platform: Optional[Poly3DCollection] = create_circular_platform(
-            self.ax, 0, 0, TABLE_HEIGHT, PLATFORM_RADIUS
+            self.ax, 0, 0, Settings.TABLE_HEIGHT, Settings.PLATFORM_RADIUS
         )
         self.motor_lines: List[Any] = [
-            self.ax.plot([], [], [], color="steelblue", lw=5)[0] for _ in BASES
+            self.ax.plot([], [], [], color="steelblue", lw=5)[0] for _ in Settings.BASES
         ]
         self.push_lines: List[Any] = [
-            self.ax.plot([], [], [], color="darkorange", lw=3)[0] for _ in BASES
+            self.ax.plot([], [], [], color="darkorange", lw=5)[0] for _ in Settings.BASES
         ]
         self.ball_scatter = self.ax.scatter([], [], [], c="red", s=250, depthshade=True)
         (self.trail_line,) = self.ax.plot([], [], [], "r-", lw=1, alpha=0.6)
@@ -124,7 +123,7 @@ class Visualizer:
         if self.platform is not None:
             self.platform.remove()
         self.platform = create_circular_platform(
-            self.ax, roll, pitch, z, PLATFORM_RADIUS
+            self.ax, roll, pitch, z, Settings.PLATFORM_RADIUS
         )
 
         # Update legs

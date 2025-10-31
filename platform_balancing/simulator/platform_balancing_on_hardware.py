@@ -1,29 +1,10 @@
-import re, time, sys, serial, serial.tools.list_ports
+import re
+import time
+import serial
+import serial.tools.list_ports
 import numpy as np
-import math
-from typing import Tuple, List, Optional, Sequence, Any
-from numpy.typing import NDArray
+from settings import Settings
 
-# ------------------------------------------------------------------
-#  CONSTANTS
-# ------------------------------------------------------------------
-# Units in [m]
-MOTOR_LINK_LEN = 0.08
-PUSH_LINK_LEN = 0.095
-BALL_RADIUS = 0.02
-G = 9.81
-TABLE_HEIGHT = 0.1
-PLATFORM_RADIUS = 0.15
-BASE_RADIUS = 0.8665 / np.sqrt(3)
-PLATFORM_THICKNESS = 0.003
-
-angles = np.deg2rad([0, 120, 240])
-BASES = [(BASE_RADIUS*np.cos(a), BASE_RADIUS*np.sin(a), 0.0) for a in angles]
-CONTACTS = [(PLATFORM_RADIUS*np.cos(a), PLATFORM_RADIUS*np.sin(a)) for a in angles]
-
-# ------------------------------------------------------------------
-#  SERIAL HELPERS
-# ------------------------------------------------------------------
 def select_serial_port():
     ports = list(serial.tools.list_ports.comports())
     if not ports:
@@ -93,11 +74,11 @@ def leg_points_rigid(base, contact_local, plane_pose, l1, l2):
     if not ok: return None
     return base, bearing
 
-def solve_motor_angles_for_plane(roll_deg, pitch_deg, z=TABLE_HEIGHT):
+def solve_motor_angles_for_plane(roll_deg, pitch_deg, z=Settings.TABLE_HEIGHT):
     roll = np.deg2rad(roll_deg); pitch = np.deg2rad(pitch_deg)
     out = np.full(3, np.nan)
-    for i, (b, c) in enumerate(zip(BASES, CONTACTS)):
-        segs = leg_points_rigid(np.array(b), np.array([c[0], c[1], 0.0]), (roll, pitch, z), MOTOR_LINK_LEN, PUSH_LINK_LEN)
+    for i, (b, c) in enumerate(zip(Settings.BASES, Settings.CONTACTS)):
+        segs = leg_points_rigid(np.array(b), np.array([c[0], c[1], 0.0]), (roll, pitch, z), Settings.MOTOR_LINK_LEN, Settings.PUSH_LINK_LEN)
         if segs is None: continue
         b1, br = segs
         out[i] = motor_angle_deg(b1, br)

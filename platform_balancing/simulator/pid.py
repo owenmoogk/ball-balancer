@@ -2,7 +2,7 @@ import numpy as np
 from numpy.typing import NDArray
 from simulator import StewartPlatformSimulator
 from visualizer import Visualizer
-from simulator import TABLE_HEIGHT, G
+from settings import Settings
 import time
 
 
@@ -35,7 +35,7 @@ class PIDController:
 
         a_des = p + i + d  # desired acceleration in x,y (m/s^2) (index 0 -> x, 1 -> y)
 
-        tilt = a_des / (G)
+        tilt = a_des / (Settings.G)
 
         pitch = tilt[0]  # positive pitch accelerates +x
         roll = tilt[1]  # positive roll accelerates +y
@@ -57,7 +57,7 @@ if __name__ == "__main__":
     angles = (0,0)
     for step in range(10000):
         t_start = time.time()
-        sim.step(target_pose=(angles[0], angles[1], TABLE_HEIGHT))
+        sim.step(target_pose=(angles[0], angles[1], Settings.TABLE_HEIGHT))
         if (step % 10 == 0 ):
             vis.update()
         angles = pid.compute_angles(error=sim.ball.pos, velocity=sim.ball.vel)
@@ -65,4 +65,3 @@ if __name__ == "__main__":
         sleep_time = sim.dt - elapsed
         if sleep_time > 0:
             time.sleep(sleep_time)
-        print(step*sim.dt)
