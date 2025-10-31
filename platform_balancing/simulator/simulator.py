@@ -14,7 +14,7 @@ PLATFORM_RADIUS: float = 0.5  # Radius of the circular platform
 BASE_RADIUS: float = 0.6  # Radius of the base circle
 PLATFORM_THICKNESS: float = 0.01
 
-DT: float = 0.01
+DT: float = 0.005
 TARGET_FPS: int = 60
 
 # Generate 120-degree spaced points

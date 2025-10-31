@@ -52,10 +52,9 @@ class PIDController:
 
 if __name__ == "__main__":
     sim = StewartPlatformSimulator()
-    pid = PIDController(kp=1, ki=0, kd=1, dt=sim.dt)
+    pid = PIDController(kp=5, ki=0, kd=5, dt=sim.dt)
     vis = Visualizer(sim=sim)
     angles = (0,0)
-    t = 0
     for step in range(10000):
         t_start = time.time()
         sim.step(target_pose=(angles[0], angles[1], TABLE_HEIGHT))
@@ -66,3 +65,4 @@ if __name__ == "__main__":
         sleep_time = sim.dt - elapsed
         if sleep_time > 0:
             time.sleep(sleep_time)
+        print(step*sim.dt)
