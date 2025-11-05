@@ -2,9 +2,10 @@ import cv2
 import numpy as np
 
 # Load calibration data
-camera_matrix = np.array([[932.0900126242127,0,638.6549019259521],
-                [0,931.4949715786727,342.9911521888232],
-                [0,0,1]])
+camera_matrix = np.array([[1398.135018936319,0,957.9823528889282],
+                          [0,1397.2424573680091,514.4867282832348],
+                          [0,0,1]])
+  
 dist_coeffs = np.array([0.10393692155716833,
                         -0.17168576648599584,
                         -0.0005549638588882746,
@@ -12,8 +13,8 @@ dist_coeffs = np.array([0.10393692155716833,
                         0.03137706338566113])
 
 cap = cv2.VideoCapture(0,cv2.CAP_DSHOW)
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 
 print("Press 'q' to quit.")
 while True:
