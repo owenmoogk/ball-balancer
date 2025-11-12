@@ -1,0 +1,5 @@
+numpy
+Pillow
+reportlab
+opencv-contrib-python
+pyyaml
