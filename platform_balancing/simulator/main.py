@@ -4,15 +4,18 @@ import serial.tools.list_ports
 import numpy as np
 from pid import PIDController
 import math
+import os
 from platform_controller import PlatformController
 from simulator import simulation_main
+from tracking import BallTracker
 
-# Dummy placeholder for ball position function
-def get_x_y():
-    t = time.time()  # current time in seconds
-    x = 0.05 * np.sin(2 * np.pi * 0.5 * t)  
-    y = 0.05 * np.cos(2 * np.pi * 0.5 * t)  
-    return np.array([x, y])
+
+# # Dummy placeholder for ball position function
+# def get_x_y():
+#     t = time.time()  # current time in seconds
+#     x = 0.05 * np.sin(2 * np.pi * 0.5 * t)  
+#     y = 0.05 * np.cos(2 * np.pi * 0.5 * t)  
+#     return np.array([x, y])
 
 
 def select_serial_port():
@@ -34,16 +37,23 @@ def hardware_main():
     if not port:
         return
 
+    tracker = BallTracker(
+        calib_file=r'c:\Users\asali\OneDrive\Desktop\School\3B\MTE 380\MTE-380-proj\platform_balancing\simulator\camera_calibration.yaml',
+        tag_csv=r'c:\Users\asali\OneDrive\Desktop\School\3B\MTE 380\MTE-380-proj\platform_balancing\simulator\tags_positions.csv',
+        camera_index=1,
+        show_debug=True
+    )
+
     plane = PlatformController(port)
     pid = PIDController(kp=5, ki=0, kd=5)
     setpoint = np.array([0.0, 0.0])
-    prev_pos = get_x_y()  # initial position
+    prev_pos = BallTracker.get_position()  # initial position
     prev_time = time.time()
 
     try:
         while True:
             # Get current ball position and timestamp
-            current_pos = get_x_y()
+            current_pos = BallTracker.get_position()
             now = time.time()
             dt = now - prev_time
             prev_time = now
@@ -70,9 +80,10 @@ def hardware_main():
         pass
     finally:
         plane.close()
+        BallTracker.release()
 
 
-HARDWARE = True
+HARDWARE = False
 if __name__ == "__main__":
     if HARDWARE:
         hardware_main()
