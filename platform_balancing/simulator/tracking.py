@@ -16,7 +16,7 @@ class BallTracker:
         show_debug: bool = False
     ):
         self.show_debug = show_debug
-        self.cap = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
+        self.cap = cv2.VideoCapture(camera_index)
 
         # --- Load calibration ---
         with open(calib_file, "r") as f:
@@ -35,11 +35,16 @@ class BallTracker:
         self.aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_APRILTAG_36h11)
         self.parameters = cv2.aruco.DetectorParameters_create()
 
-        # --- Color tolerances ---
-        self.BALL_LOWER_BGR = np.array([30, 136, 200], dtype=np.uint8)
-        self.BALL_UPPER_BGR = np.array([90, 220, 255], dtype=np.uint8)
-        self.RING_LOWER_BGR = np.array([23, 53, 157], dtype=np.uint8)
-        self.RING_UPPER_BGR = np.array([74, 89, 192], dtype=np.uint8)
+
+
+
+        tol_ball_low = -20; tol_ball_high = 15
+        tol_ring_low = 5; tol_ring_high = 0
+
+        self.BALL_LOWER_BGR = np.array([max(41+tol_ball_low,0), max(117+tol_ball_low,0), max(199+tol_ball_low,0)], dtype=np.uint8)
+        self.BALL_UPPER_BGR = np.array([min(80+tol_ball_high,255), min(157+tol_ball_high,255), min(230+tol_ball_high,255)], dtype=np.uint8)
+        self.RING_LOWER_BGR = np.array([max(55+tol_ring_low,0), max(70+tol_ring_low,0), max(172+tol_ring_low,0)], dtype=np.uint8)
+        self.RING_UPPER_BGR = np.array([min(95+tol_ring_high,255), min(109+tol_ring_high,255), min(198+tol_ring_high,255)], dtype=np.uint8)
 
     # ---------------- DETECTION HELPERS ----------------
     def _detect_ball(self, frame):
@@ -74,7 +79,7 @@ class BallTracker:
             return None
 
     # ---------------- MAIN METHOD ----------------
-    def get_position(self) -> Optional[np.ndarray]:
+    def get_position(self):
         """Return ball position [x_m, y_m] in platform frame (meters)."""
         ret, frame = self.cap.read()
         if not ret:
@@ -141,13 +146,13 @@ class BallTracker:
 
         x_mm = x_px * scale_x
         y_mm = y_px * scale_y
-
-        if self.show_debug:
-            display = frame_undist.copy()
-            cv2.circle(display, tuple(np.int32(ball_px)), 6, (255,0,0), -1)
-            cv2.circle(display, tuple(np.int32(plate_center)), 8, (0,255,255), -1)
-            cv2.imshow("Ball Tracker", display)
-            cv2.waitKey(1)
+        print(f"X: {x_mm}, Y: {y_mm}")
+        # if self.show_debug:
+        #     display = frame_undist.copy()
+            # cv2.circle(display, tuple(np.int32(ball_px)), 6, (255,0,0), -1)
+            # cv2.circle(display, tuple(np.int32(plate_center)), 8, (0,255,255), -1)
+            # cv2.imshow("Ball Tracker", display)
+            # cv2.waitKey(1)
 
         # convert to meters
         return np.array([x_mm, y_mm]) / 1000.0

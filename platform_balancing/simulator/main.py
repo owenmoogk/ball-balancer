@@ -38,22 +38,29 @@ def hardware_main():
         return
 
     tracker = BallTracker(
-        calib_file=r'c:\Users\asali\OneDrive\Desktop\School\3B\MTE 380\MTE-380-proj\platform_balancing\simulator\camera_calibration.yaml',
-        tag_csv=r'c:\Users\asali\OneDrive\Desktop\School\3B\MTE 380\MTE-380-proj\platform_balancing\simulator\tags_positions.csv',
-        camera_index=1,
+        calib_file="/Users/brendanchharawala/Documents/GitHub/ball-balancer/platform_balancing/simulator/camera_calibration.yaml",
+        tag_csv="/Users/brendanchharawala/Documents/GitHub/ball-balancer/platform_balancing/simulator/tags_positions.csv",
+        camera_index=0,
         show_debug=True
     )
 
     plane = PlatformController(port)
-    pid = PIDController(kp=5, ki=0, kd=5)
+    pid = PIDController(kp=3, ki=0, kd=3)
     setpoint = np.array([0.0, 0.0])
-    prev_pos = BallTracker.get_position()  # initial position
+    prev_pos = tracker.get_position()  # initial position
+    while prev_pos is None:
+        time.sleep(0.01)
+        prev_pos = tracker.get_position()
     prev_time = time.time()
 
     try:
         while True:
             # Get current ball position and timestamp
-            current_pos = BallTracker.get_position()
+            current_pos = tracker.get_position()
+            while current_pos is None:
+                time.sleep(0.01)
+                current_pos = tracker.get_position()
+
             now = time.time()
             dt = now - prev_time
             prev_time = now
@@ -65,11 +72,11 @@ def hardware_main():
             # Compute error
             error = setpoint - current_pos
 
-            print(error, current_pos)
+            # print(error, current_pos)
 
             # Compute desired roll/pitch angles from PID
             roll, pitch = pid.compute_angles(error, velocity, dt)
-            print(roll, pitch)
+            # print(roll, pitch)
             # Send commands to plane
             plane.send_angles(math.degrees(roll), math.degrees(pitch))
 
@@ -80,12 +87,10 @@ def hardware_main():
         pass
     finally:
         plane.close()
-        BallTracker.release()
+        tracker.release()
 
 
-HARDWARE = False
+HARDWARE = True
 if __name__ == "__main__":
-    if HARDWARE:
-        hardware_main()
-    else:
-        simulation_main()
+
+    simulation_main()
