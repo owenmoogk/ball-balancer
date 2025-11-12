@@ -2,17 +2,11 @@ import time
 import serial
 import serial.tools.list_ports
 import numpy as np
-from pid import PIDController
 import math
+from pid import PIDController
 from platform_controller import PlatformController
 from simulator import simulation_main
-
-# Dummy placeholder for ball position function
-def get_x_y():
-    t = time.time()  # current time in seconds
-    x = 0.05 * np.sin(2 * np.pi * 0.5 * t)  
-    y = 0.05 * np.cos(2 * np.pi * 0.5 * t)  
-    return np.array([x, y])
+from ball_tracker import BallTracker
 
 
 def select_serial_port():
@@ -28,47 +22,41 @@ def select_serial_port():
         return None
 
 
-
 def hardware_main():
     port = select_serial_port()
     if not port:
         return
 
     plane = PlatformController(port)
-    pid = PIDController(kp=5, ki=0, kd=5)
+    pid = PIDController(kp=2.8, ki=1, kd=2)
+    tracker = BallTracker(camera_index=1)
+
     setpoint = np.array([0.0, 0.0])
-    prev_pos = get_x_y()  # initial position
+    prev_pos = tracker.get_x_y(display=False)
     prev_time = time.time()
 
     try:
         while True:
-            # Get current ball position and timestamp
-            current_pos = get_x_y()
+            current_pos = tracker.get_x_y(display=True)
             now = time.time()
             dt = now - prev_time
             prev_time = now
 
-            # Compute velocity (simple finite difference)
             velocity = (current_pos - prev_pos) / dt
             prev_pos = current_pos
 
-            # Compute error
             error = setpoint - current_pos
 
-            print(error, current_pos)
-
-            # Compute desired roll/pitch angles from PID
             roll, pitch = pid.compute_angles(error, velocity, dt)
-            print(roll, pitch)
-            # Send commands to plane
+            print(f"Error: {error}, Pos: {current_pos}, Roll: {roll}, Pitch: {pitch}")
             plane.send_angles(math.degrees(roll), math.degrees(pitch))
 
-            # Control loop rate (~30–50 Hz)
             time.sleep(0.03)
 
     except KeyboardInterrupt:
         pass
     finally:
+        tracker.release()
         plane.close()
 
 
