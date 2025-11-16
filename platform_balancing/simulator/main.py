@@ -3,7 +3,7 @@ import serial
 import serial.tools.list_ports
 import numpy as np
 import math
-from pid import PIDController
+from pid import BallController
 from platform_controller import PlatformController
 from simulator import simulation_main
 from ball_tracker import BallTracker
@@ -28,10 +28,9 @@ def hardware_main():
         return
 
     plane = PlatformController(port)
-    pid = PIDController(kp=2.8, ki=1, kd=2)
+    controller = BallController(kp=14.8, ki=0, kd=0)
     tracker = BallTracker(camera_index=1)
 
-    setpoint = np.array([0.0, 0.0])
     prev_pos = tracker.get_x_y(display=False)
     prev_time = time.time()
 
@@ -42,13 +41,12 @@ def hardware_main():
             dt = now - prev_time
             prev_time = now
 
+
             velocity = (current_pos - prev_pos) / dt
             prev_pos = current_pos
 
-            error = setpoint - current_pos
-
-            roll, pitch = pid.compute_angles(error, velocity, dt)
-            print(f"Error: {error}, Pos: {current_pos}, Roll: {roll}, Pitch: {pitch}")
+            roll, pitch = controller.compute_angles(current_pos, velocity, dt)
+            # print(f"Error: {error}, Pos: {current_pos}, Roll: {roll}, Pitch: {pitch}")
             plane.send_angles(math.degrees(roll), math.degrees(pitch))
 
             time.sleep(0.03)

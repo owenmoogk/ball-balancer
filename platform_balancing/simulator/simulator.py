@@ -5,7 +5,7 @@ from settings import Settings
 from kinematics import rotation_matrix
 from visualizer import Visualizer
 import time
-from pid import PIDController
+from pid import BallController
 
 
 class Ball:
@@ -84,7 +84,7 @@ class StewartPlatformSimulator:
 
 def simulation_main():
     sim = StewartPlatformSimulator()
-    pid = PIDController(kp=5, ki=0, kd=5)
+    pid = BallController(kp=5, ki=0, kd=5)
     vis = Visualizer(sim=sim)
     angles = (0, 0)
     for step in range(10000):
