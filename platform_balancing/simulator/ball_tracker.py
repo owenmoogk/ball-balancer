@@ -9,10 +9,11 @@ class BallTracker:
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
         # Calibrated HSV range
-        self.lower_hsv = np.array([11, 140, 188], dtype=np.uint8)
-        self.upper_hsv = np.array([16, 255, 255], dtype=np.uint8)
+        self.lower_hsv = np.array([10, 100, 110], dtype=np.uint8)
+        self.upper_hsv = np.array([18, 255, 255], dtype=np.uint8)
 
         self.last_position = np.array([0.0, 0.0])
+
 
     def get_x_y(self, display=True):
         """Returns (x, y) position in normalized coordinates (0–1 range)."""
@@ -48,6 +49,9 @@ class BallTracker:
                         (0, 255, 0),
                         2,
                     )
+
+        else:
+            return None
 
         if display:
             cv2.imshow("Ball Tracking", frame)

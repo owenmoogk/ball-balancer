@@ -16,6 +16,9 @@ class PIDController:
         self.max_tilt_rad = math.radians(MAX_TILT_DEG)
         self._last_time = time.time()
 
+    def reset_integral(self):
+        self.integral = np.zeros(2)
+
     def compute_angles(
         self, error: NDArray[np.float64], velocity: NDArray[np.float64], dt: float
     ) -> np.ndarray:

@@ -28,7 +28,7 @@ def hardware_main():
         return
 
     plane = PlatformController(port)
-    pid = PIDController(kp=2.8, ki=1, kd=2)
+    pid = PIDController(kp=2.8*0.5, ki=1*0.5, kd=2)
     tracker = BallTracker(camera_index=1)
 
     setpoint = np.array([0.0, 0.0])
@@ -38,17 +38,26 @@ def hardware_main():
     try:
         while True:
             current_pos = tracker.get_x_y(display=True)
+            print(current_pos)
+            if current_pos is None:
+                pid.reset_integral()
+                plane.send_angles(0, 0)
+                continue
+
             now = time.time()
             dt = now - prev_time
             prev_time = now
 
-            velocity = (current_pos - prev_pos) / dt
+            velocity = np.zeros(3)
+            if (prev_pos is not None):
+                velocity = (current_pos - prev_pos) / dt
+            
             prev_pos = current_pos
 
             error = setpoint - current_pos
 
             roll, pitch = pid.compute_angles(error, velocity, dt)
-            print(f"Error: {error}, Pos: {current_pos}, Roll: {roll}, Pitch: {pitch}")
+            # print(f"Error: {error}, Pos: {current_pos}, Roll: {roll}, Pitch: {pitch}")
             plane.send_angles(math.degrees(roll), math.degrees(pitch))
 
             time.sleep(0.03)
