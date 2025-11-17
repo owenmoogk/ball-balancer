@@ -13,13 +13,26 @@ class BallTracker:
         self.upper_hsv = np.array([18, 255, 255], dtype=np.uint8)
 
         self.last_position = np.array([0.0, 0.0])
+        self.center = None
+        self.frame_shape = (480, 640)
 
+        # Window setup
+        cv2.namedWindow("Ball Tracking")
+        cv2.setMouseCallback("Ball Tracking", self.set_center)
+
+    def set_center(self, event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            self.center = (x, y)
+            print(f"Center set to: {self.center}")
 
     def get_x_y(self, display=True):
-        """Returns (x, y) position in normalized coordinates (0–1 range)."""
+        """Returns (x, y) position in normalized coordinates (-0.5..0.5 range)."""
         ret, frame = self.cap.read()
         if not ret:
             return self.last_position
+
+        h, w, _ = frame.shape
+        self.frame_shape = (h, w)
 
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         mask = cv2.inRange(hsv, self.lower_hsv, self.upper_hsv)
@@ -33,9 +46,8 @@ class BallTracker:
             c = max(contours, key=cv2.contourArea)
             ((x, y), radius) = cv2.minEnclosingCircle(c)
             if radius > 10:
-                h, w, _ = frame.shape
-                # Normalize to -0.5..0.5 range
-                pos = np.array([(x - w / 2) / w, (y - h / 2) / h])
+                cx, cy = self.center if self.center is not None else (w / 2, h / 2)
+                pos = np.array([(x - cx) / w, (y - cy) / h])
                 self.last_position = pos
 
                 if display:
@@ -50,12 +62,12 @@ class BallTracker:
                         2,
                     )
 
-        else:
-            return None
-
         if display:
             cv2.imshow("Ball Tracking", frame)
             cv2.waitKey(1)
+
+        if not contours:
+            return None
 
         return pos
 
