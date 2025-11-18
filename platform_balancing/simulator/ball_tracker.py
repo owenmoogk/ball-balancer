@@ -25,6 +25,26 @@ class BallTracker:
             self.center = (x, y)
             print(f"Center set to: {self.center}")
 
+    def draw_center(self, frame):
+        h, w, _ = frame.shape
+        if self.center is None:
+            cx, cy = w // 2, h // 2
+        else:
+            cx, cy = self.center
+
+        color = (0, 0, 255)  # red
+        size = 10
+        thickness = 2
+
+        # Horizontal line
+        cv2.line(frame, (cx - size, cy), (cx + size, cy), color, thickness)
+
+        # Vertical line
+        cv2.line(frame, (cx, cy - size), (cx, cy + size), color, thickness)
+
+        # Small center dot
+        cv2.circle(frame, (cx, cy), 3, color, -1)
+
     def get_x_y(self, display=True):
         """Returns (x, y) position in normalized coordinates (-0.5..0.5 range)."""
         ret, frame = self.cap.read()
@@ -63,6 +83,7 @@ class BallTracker:
                     )
 
         if display:
+            self.draw_center(frame)
             cv2.imshow("Ball Tracking", frame)
             cv2.waitKey(1)
 
