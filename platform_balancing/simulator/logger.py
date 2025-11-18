@@ -31,14 +31,16 @@ class Logger:
 
         self.file = open(self.csv_path, "w", newline="")
         self.writer = csv.writer(self.file)
-        self.writer.writerow(["time", "dt", "error_x", "error_y"])
+        self.writer.writerow(["time", "dt", "error", "p", "i", "d"])
 
-    def log(self, now, dt, error):
+    def log(self, now, dt, error, p, i ,d):
         self.writer.writerow([
             now,
             dt,
-            float(error[0]),
-            float(error[1]),
+            error,
+            p,
+            i,
+            d
         ])
 
     def close(self):
