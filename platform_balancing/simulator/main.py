@@ -7,7 +7,11 @@ from pid import PIDController
 from platform_controller import PlatformController
 from simulator import simulation_main
 from ball_tracker import BallTracker
+from logger import Logger
 
+K_P = 2.8*0.5
+K_I = 0.5*1
+K_D = 1.7
 
 def select_serial_port():
     ports = list(serial.tools.list_ports.comports())
@@ -28,9 +32,16 @@ def hardware_main():
         return
 
     plane = PlatformController(port)
-    pid = PIDController(kp=2.8*0.5, ki=1*0.5, kd=2)
-    tracker = BallTracker(camera_index=1)
-
+    pid = PIDController(kp=K_P, ki=K_I, kd=K_D)
+    tracker = BallTracker(camera_index=4)
+    config = {
+        "kp": K_P,
+        "ki": K_I,
+        "kd": K_D,
+        "max_tilt_angle_deg": 15,
+        "platform_height_m": 0.05
+    }
+    logger = Logger(config)
     setpoint = np.array([0.0, 0.0])
     prev_pos = tracker.get_x_y(display=False)
     prev_time = time.time()
@@ -57,16 +68,19 @@ def hardware_main():
             error = setpoint - current_pos
 
             roll, pitch = pid.compute_angles(error, velocity, dt)
-            # print(f"Error: {error}, Pos: {current_pos}, Roll: {roll}, Pitch: {pitch}")
+            print(f"Error: {error}, Pos: {current_pos}, Roll: {roll}, Pitch: {pitch}")
             plane.send_angles(math.degrees(roll), math.degrees(pitch))
-
-            time.sleep(0.03)
+            p,i,d = pid.get_pid_values()
+            # logger.log(now, dt, error, p, i ,d)
+            logger.log(now, dt, error)
+            # time.sleep(0.03)
 
     except KeyboardInterrupt:
         pass
     finally:
         tracker.release()
         plane.close()
+        logger.close()
 
 
 HARDWARE = True

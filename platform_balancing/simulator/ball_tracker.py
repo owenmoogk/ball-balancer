@@ -3,8 +3,8 @@ import numpy as np
 
 
 class BallTracker:
-    def __init__(self, camera_index=1):
-        self.cap = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
+    def __init__(self, camera_index=4):
+        self.cap = cv2.VideoCapture(camera_index)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
