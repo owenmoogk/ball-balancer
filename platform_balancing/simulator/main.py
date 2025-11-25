@@ -33,7 +33,7 @@ def hardware_main():
 
     plane = PlatformController(port)
     pid = PIDController(kp=K_P, ki=K_I, kd=K_D)
-    tracker = BallTracker(camera_index=4)
+    tracker = BallTracker(camera_index=1)
     config = {
         "kp": K_P,
         "ki": K_I,
@@ -70,10 +70,7 @@ def hardware_main():
             roll, pitch = pid.compute_angles(error, velocity, dt)
             print(f"Error: {error}, Pos: {current_pos}, Roll: {roll}, Pitch: {pitch}")
             plane.send_angles(math.degrees(roll), math.degrees(pitch))
-            p,i,d = pid.get_pid_values()
-            # logger.log(now, dt, error, p, i ,d)
             logger.log(now, dt, error)
-            # time.sleep(0.03)
 
     except KeyboardInterrupt:
         pass

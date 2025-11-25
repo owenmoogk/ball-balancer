@@ -82,15 +82,18 @@ class Logger:
         self.rows = []
         
         # Define CSV header
-        self.headers = ["time", "dt", "error", "p", "i", "d"]
+        self.headers = ["time", "dt", "error_x", "error_y"]
 
     def log(self, now, dt, error):
         """Store a single log entry in memory."""
-        self.rows.append({
-            "time": now,
-            "dt": dt,
-            "error": error,
-        })
+        self.rows.append(
+            {
+                "time": now,
+                "dt": dt,
+                "error_x": error[0],
+                "error_y": error[1],
+            }
+        )
 
     def close(self):
         """Write all stored log entries to CSV."""

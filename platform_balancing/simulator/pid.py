@@ -15,9 +15,6 @@ class PIDController:
         self.integral = np.zeros(2)
         self.max_tilt_rad = math.radians(MAX_TILT_DEG)
         self._last_time = time.time()
-        self.p = None
-        self.i = None
-        self.d = None
 
     def reset_integral(self):
         self.integral = np.zeros(2)
@@ -33,12 +30,12 @@ class PIDController:
         self._last_time = now
 
         # PID calculations
-        self.p = self.kp * error
+        p = self.kp * error
         self.integral += error * dt
-        self.i = self.ki * self.integral
-        self.d = self.kd * -velocity
+        i = self.ki * self.integral
+        d = self.kd * -velocity
 
-        a_des = self.p + self.i + self.d
+        a_des = p + i + d
 
         # Convert to tilt
         tilt = a_des / Settings.G
@@ -54,5 +51,3 @@ class PIDController:
 
         return np.array([roll, pitch])
     
-    def get_pid_values(self):
-        return self.p, self.i, self.d

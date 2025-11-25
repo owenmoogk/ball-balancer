@@ -3,8 +3,8 @@ import numpy as np
 
 
 class BallTracker:
-    def __init__(self, camera_index=4):
-        self.cap = cv2.VideoCapture(camera_index)
+    def __init__(self, camera_index=1):
+        self.cap = cv2.VideoCapture(camera_index, cv2.CAP_DSHOW)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
@@ -42,6 +42,10 @@ class BallTracker:
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         pos = self.last_position
 
+        if display:
+            cv2.imshow("Ball Tracking", frame)
+            cv2.waitKey(1)
+
         if contours:
             c = max(contours, key=cv2.contourArea)
             ((x, y), radius) = cv2.minEnclosingCircle(c)
@@ -62,14 +66,12 @@ class BallTracker:
                         2,
                     )
 
-        if display:
-            cv2.imshow("Ball Tracking", frame)
-            cv2.waitKey(1)
+                return pos
 
-        if not contours:
-            return None
 
-        return pos
+
+
+        return None
 
     def release(self):
         self.cap.release()
