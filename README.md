@@ -1,2 +1,3 @@
-This is the 380 Project
-pee pee poo poo
+MTE 380 Project
+
+Making a ping pong ball balancer on a Stewart Platform

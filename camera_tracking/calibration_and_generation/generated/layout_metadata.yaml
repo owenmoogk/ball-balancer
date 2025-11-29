@@ -1,9 +1,0 @@
-chess_inner_cols: 9
-chess_inner_rows: 6
-chess_square_mm: 30.0
-created_by: generate_plate_strict_with_dimensions.py
-dpi: 700
-num_tags: 4
-plate_radius_mm: 150
-tag_png_folder: /Users/brendanchharawala/Documents/GitHub/ball-balancer/camera_tracking/calibration_and_generation/generated/tag_pngs
-tag_size_mm: 75
