@@ -7,9 +7,8 @@ class PlatformController:
     def __init__(self, port: str, baudrate=115200):
         self.ser = serial.Serial(port, baudrate, timeout=0.1)
         time.sleep(2)  # allow connection to settle
-        self.is_first = True
-        self.servo_cmds = [90, 90, 90]
-
+        msg = f"{90} {90} {90}\n"
+        self.ser.write(msg.encode())
 
     def send_angles(self, roll_deg, pitch_deg):
         th = solve_motor_angles_for_plane(roll_deg, pitch_deg)
@@ -34,7 +33,7 @@ class PlatformController:
         while self.ser.in_waiting:
             ln = self.ser.readline().decode(errors="ignore").rstrip()
             # if ln:
-            #     print(f"<- {ln}")
+                # print(f"<- {ln}")
 
     def close(self):
         self.ser.close()

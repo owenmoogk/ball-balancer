@@ -2,21 +2,16 @@ import time
 import serial
 import serial.tools.list_ports
 import numpy as np
-from pid import PIDController
 import math
-import os
+from pid import PIDController
 from platform_controller import PlatformController
 from simulator import simulation_main
-from tracking import BallTracker
+from ball_tracker import BallTracker
+from logger import Logger
 
-
-# # Dummy placeholder for ball position function
-# def get_x_y():
-#     t = time.time()  # current time in seconds
-#     x = 0.05 * np.sin(2 * np.pi * 0.5 * t)  
-#     y = 0.05 * np.cos(2 * np.pi * 0.5 * t)  
-#     return np.array([x, y])
-
+K_P = 2.8*0.5
+K_I = 0.5*1
+K_D = 1.7
 
 def select_serial_port():
     ports = list(serial.tools.list_ports.comports())
@@ -29,7 +24,6 @@ def select_serial_port():
         return ports[int(input("Select port number: "))].device
     except:
         return None
-
 
 
 def hardware_main():
@@ -45,52 +39,57 @@ def hardware_main():
     )
 
     plane = PlatformController(port)
-    pid = PIDController(kp=3, ki=0, kd=3)
+    pid = PIDController(kp=K_P, ki=K_I, kd=K_D)
+    tracker = BallTracker(camera_index=1)
+    config = {
+        "kp": K_P,
+        "ki": K_I,
+        "kd": K_D,
+        "max_tilt_angle_deg": 15,
+        "platform_height_m": 0.05
+    }
+    logger = Logger(config)
     setpoint = np.array([0.0, 0.0])
-    prev_pos = tracker.get_position()  # initial position
-    while prev_pos is None:
-        time.sleep(0.01)
-        prev_pos = tracker.get_position()
+    prev_pos = tracker.get_x_y(display=False)
     prev_time = time.time()
 
     try:
         while True:
-            # Get current ball position and timestamp
-            current_pos = tracker.get_position()
-            while current_pos is None:
-                time.sleep(0.01)
-                current_pos = tracker.get_position()
+            current_pos = tracker.get_x_y(display=True)
+            print(current_pos)
+            if current_pos is None:
+                pid.reset_integral()
+                plane.send_angles(0, 0)
+                continue
 
             now = time.time()
             dt = now - prev_time
             prev_time = now
 
-            # Compute velocity (simple finite difference)
-            velocity = (current_pos - prev_pos) / dt
+            velocity = np.zeros(3)
+            if (prev_pos is not None):
+                velocity = (current_pos - prev_pos) / dt
+            
             prev_pos = current_pos
 
-            # Compute error
             error = setpoint - current_pos
 
-            # print(error, current_pos)
-
-            # Compute desired roll/pitch angles from PID
             roll, pitch = pid.compute_angles(error, velocity, dt)
-            # print(roll, pitch)
-            # Send commands to plane
+            print(f"Error: {error}, Pos: {current_pos}, Roll: {roll}, Pitch: {pitch}")
             plane.send_angles(math.degrees(roll), math.degrees(pitch))
-
-            # Control loop rate (~30–50 Hz)
-            time.sleep(0.03)
+            logger.log(now, dt, error)
 
     except KeyboardInterrupt:
         pass
     finally:
-        plane.close()
         tracker.release()
+        plane.close()
+        logger.close()
 
 
 HARDWARE = True
 if __name__ == "__main__":
-
-    simulation_main()
+    if HARDWARE:
+        hardware_main()
+    else:
+        simulation_main()

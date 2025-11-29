@@ -2,8 +2,9 @@ import numpy as np
 from numpy.typing import NDArray
 from settings import Settings
 import time
+import math
 
-MAX_TILT = 0.5
+MAX_TILT_DEG = 15
 
 
 class PIDController:
@@ -12,8 +13,11 @@ class PIDController:
         self.ki = ki
         self.kd = kd
         self.integral = np.zeros(2)
-        self.max_tilt = MAX_TILT
+        self.max_tilt_rad = math.radians(MAX_TILT_DEG)
         self._last_time = time.time()
+
+    def reset_integral(self):
+        self.integral = np.zeros(2)
 
     def compute_angles(
         self, error: NDArray[np.float64], velocity: NDArray[np.float64], dt: float
@@ -29,7 +33,7 @@ class PIDController:
         p = self.kp * error
         self.integral += error * dt
         i = self.ki * self.integral
-        d = self.kd * velocity
+        d = self.kd * -velocity
 
         a_des = p + i + d
 
@@ -38,9 +42,12 @@ class PIDController:
         pitch = tilt[0]
         roll = tilt[1] 
 
-        pitch = np.clip(pitch, -self.max_tilt, self.max_tilt)
-        roll = np.clip(roll, -self.max_tilt, self.max_tilt)
+        pitch = np.clip(pitch, -self.max_tilt_rad, self.max_tilt_rad)
+        roll = np.clip(roll, -self.max_tilt_rad, self.max_tilt_rad)
+        print(self.max_tilt_rad)
+        if abs(pitch) == self.max_tilt_rad or abs(roll) == self.max_tilt_rad:
+            print("CLIPPED")
 
-        pitch = -pitch
 
         return np.array([roll, pitch])
+    
